@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Mini App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div id="background-container" class="background-container">
+        <!-- Кликавельные зоны для основных вкладок -->
+        <div class="clickable-area stats" data-link="/stats"></div>
+        <div class="clickable-area earn" data-link="/earn"></div>
+        <div class="clickable-area home" data-link="/home"></div>
+        <div class="clickable-area play" data-link="/play"></div>
+        <div class="clickable-area friends" data-link="/friends"></div>
+
+        <!-- Кликавельные зоны для вкладки Earn -->
+        <div class="earn-area earn1" data-link="https://t.me/lordkubera" style="display: none;"></div>
+        <div class="earn-area earn2" data-link="https://example.com" style="display: none;"></div>
+        <div class="earn-area earn3" data-link="https://example.com" style="display: none;"></div>
+        <div class="earn-area earn4" data-link="https://example.com" style="display: none;"></div>
+        <div class="earn-area earn5" data-link="https://example.com" style="display: none;"></div>
+    </div>
+    <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+</body>
+</html>
