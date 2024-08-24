@@ -2,14 +2,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function changeBackground(area) {
         const backgroundContainer = document.getElementById('background-container');
         if (area === 'earn') {
-            backgroundContainer.style.backgroundImage = "url('/static/earn.jpg')"; // Убедитесь, что путь правильный
+            backgroundContainer.style.backgroundImage = "url('/static/earn.jpg')";
             document.querySelectorAll('.earn-area').forEach(area => {
-                area.style.display = 'block'; // Показываем кликабельные зоны для Earn
+                area.style.display = 'block';
             });
         } else {
-            backgroundContainer.style.backgroundImage = "url('/static/fon.jpg')"; // Путь к изображению по умолчанию
+            backgroundContainer.style.backgroundImage = "url('/static/fon.jpg')";
             document.querySelectorAll('.earn-area').forEach(area => {
-                area.style.display = 'none'; // Скрываем кликабельные зоны для Earn
+                area.style.display = 'none';
             });
         }
     }
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
             event.preventDefault();
             const link = area.getAttribute('data-link');
             if (link) {
-                window.open(link, '_blank'); // Открываем ссылку в новой вкладке
+                window.open(link, '_blank');
             }
         });
     });

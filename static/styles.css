@@ -103,3 +103,39 @@ html, body {
     width: 41%;
     height: 5%;
 }
+
+/* Новые области для вкладки Earn */
+.earn6 {
+    top: 26%;
+    left: 48%;
+    width: 37%;
+    height: 5%;
+}
+
+.earn7 {
+    top: 31%;
+    left: 48%;
+    width: 37%;
+    height: 5%;
+}
+
+.earn8 {
+    top: 37%;
+    left: 48%;
+    width: 37%;
+    height: 5%;
+}
+
+.earn9 {
+    top: 42.6%;
+    left: 48%;
+    width: 37%;
+    height: 5%;
+}
+
+.earn10 {
+    top: 48%;
+    left: 48%;
+    width: 37%;
+    height: 5%;
+}
