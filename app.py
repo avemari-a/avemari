@@ -29,6 +29,19 @@ def init_db():
     conn.commit()
     conn.close()
 
+@app.route('/get_avatar/<int:user_id>')
+def get_avatar(user_id):
+    conn = sqlite3.connect('notcoin.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT avatar_url FROM users WHERE user_id=?', (user_id,))
+    avatar_url = cursor.fetchone()
+    conn.close()
+    
+    if avatar_url:
+        return jsonify({'avatar_url': avatar_url[0]})
+    return jsonify({'avatar_url': 'default_avatar.png'})
+
+
 # Функция для получения URL аватара пользователя
 def get_user_avatar(user_id):
     url = f"https://api.telegram.org/bot7296432704:AAEMD73KfNm9OMdaYM8fphlG6Jhb246ByxI/getUserProfilePhotos?user_id={user_id}"
