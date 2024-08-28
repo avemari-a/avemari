@@ -53,8 +53,11 @@ def index():
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
-    user_id = data['user_id']
+    user_id = data.get('user_id')
     username = data.get('username', 'Unknown')
+
+    if not user_id:
+        return jsonify({'status': 'error', 'message': 'User ID is required'}), 400
 
     # Получение URL аватара
     avatar_url = get_user_avatar(user_id)
@@ -65,9 +68,13 @@ def register():
     cursor.execute('INSERT OR IGNORE INTO users (user_id, username, avatar_url) VALUES (?, ?, ?)', 
                    (user_id, username, avatar_url))
     conn.commit()
+    
+    # Получение текущего количества монет
+    cursor.execute('SELECT coins FROM users WHERE user_id=?', (user_id,))
+    coins = cursor.fetchone()
     conn.close()
     
-    return jsonify({'status': 'success', 'message': 'User registered successfully'})
+    return jsonify({'status': 'success', 'avatar_url': avatar_url or 'default_avatar.png', 'points': coins[0] if coins else 0})
 
 # Маршрут для начисления монет при клике
 @app.route('/click', methods=['POST'])
