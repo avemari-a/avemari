@@ -40,12 +40,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-});
 
-document.addEventListener("DOMContentLoaded", function() {
     // Инициализация Telegram Web Apps SDK
     const tg = window.Telegram.WebApp;
-
     const user = tg.initDataUnsafe.user;
     const user_id = user.id;
     const username = user.username || 'Unknown';
@@ -63,14 +60,18 @@ document.addEventListener("DOMContentLoaded", function() {
     })
     .then(response => response.json())
     .then(data => {
-        console.log(data);
+        console.log('Register response:', data); // Логируем ответ для отладки
+
         document.getElementById("username").textContent = username;
 
         // Получение аватара пользователя из базы данных
         fetch(`/get_avatar/${user_id}`)
             .then(response => response.json())
             .then(data => {
+                console.log('Avatar response:', data); // Логируем ответ для отладки
                 document.getElementById("avatar").src = data.avatar_url || '/static/default-avatar.png';
-            });
-    });
+            })
+            .catch(error => console.error('Error fetching avatar:', error)); // Логирование ошибок
+    })
+    .catch(error => console.error('Error registering user:', error)); // Логирование ошибок
 });
