@@ -41,3 +41,36 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+document.addEventListener("DOMContentLoaded", function() {
+    // Инициализация Telegram Web Apps SDK
+    const tg = window.Telegram.WebApp;
+
+    const user = tg.initDataUnsafe.user;
+    const user_id = user.id;
+    const username = user.username || 'Unknown';
+
+    // Отправляем данные для регистрации на сервер
+    fetch('/register', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            user_id: user_id,
+            username: username
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);
+        document.getElementById("username").textContent = username;
+
+        // Получение аватара пользователя из базы данных
+        fetch(`/get_avatar/${user_id}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("avatar").src = data.avatar_url || '/static/default-avatar.png';
+            });
+    });
+});

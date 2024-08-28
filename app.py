@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 import sqlite3
+import requests
 
 app = Flask(__name__)
 
@@ -12,6 +13,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY, 
             username TEXT,
+            avatar_url TEXT,
             coins INTEGER DEFAULT 0
         )
     ''')
@@ -27,6 +29,21 @@ def init_db():
     conn.commit()
     conn.close()
 
+# Функция для получения URL аватара пользователя
+def get_user_avatar(user_id):
+    url = f"https://api.telegram.org/bot7296432704:AAEMD73KfNm9OMdaYM8fphlG6Jhb246ByxI/getUserProfilePhotos?user_id={user_id}"
+    response = requests.get(url).json()
+    
+    if response['ok'] and response['result']['total_count'] > 0:
+        file_id = response['result']['photos'][0][0]['file_id']
+        file_info_url = f"https://api.telegram.org/bot7296432704:AAEMD73KfNm9OMdaYM8fphlG6Jhb246ByxI/getFile?file_id={file_id}"
+        file_info_response = requests.get(file_info_url).json()
+        
+        if file_info_response['ok']:
+            file_path = file_info_response['result']['file_path']
+            return f"https://api.telegram.org/file/bot7296432704:AAEMD73KfNm9OMdaYM8fphlG6Jhb246ByxI/{file_path}"
+    return None
+
 # Маршрут для главной страницы
 @app.route('/')
 def index():
@@ -35,14 +52,18 @@ def index():
 # Маршрут для регистрации пользователя
 @app.route('/register', methods=['POST'])
 def register():
-    user_id = request.form['user_id']
-    username = request.form.get('username', 'Unknown')
+    data = request.json
+    user_id = data['user_id']
+    username = data.get('username', 'Unknown')
+
+    # Получение URL аватара
+    avatar_url = get_user_avatar(user_id)
     
     conn = sqlite3.connect('notcoin.db')
     cursor = conn.cursor()
-    
     # Вставляем пользователя, если его нет в базе
-    cursor.execute('INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)', (user_id, username))
+    cursor.execute('INSERT OR IGNORE INTO users (user_id, username, avatar_url) VALUES (?, ?, ?)', 
+                   (user_id, username, avatar_url))
     conn.commit()
     conn.close()
     
@@ -51,7 +72,8 @@ def register():
 # Маршрут для начисления монет при клике
 @app.route('/click', methods=['POST'])
 def click():
-    user_id = request.form['user_id']
+    data = request.json
+    user_id = data['user_id']
     
     conn = sqlite3.connect('notcoin.db')
     cursor = conn.cursor()
@@ -69,7 +91,8 @@ def click():
 # Маршрут для начисления монет в другой ситуации
 @app.route('/earn_coins', methods=['POST'])
 def earn_coins():
-    user_id = request.json['user_id']
+    data = request.json
+    user_id = data['user_id']
     
     conn = sqlite3.connect('notcoin.db')
     cursor = conn.cursor()
@@ -87,8 +110,9 @@ def earn_coins():
 # Маршрут для приглашения друзей
 @app.route('/invite', methods=['POST'])
 def invite():
-    user_id = request.form['user_id']
-    friend_username = request.form['friend_username']
+    data = request.json
+    user_id = data['user_id']
+    friend_username = data['friend_username']
     
     conn = sqlite3.connect('notcoin.db')
     cursor = conn.cursor()
