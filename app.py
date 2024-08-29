@@ -29,6 +29,11 @@ def init_db():
     conn.commit()
     conn.close()
 
+def get_db_connection():
+    conn = sqlite3.connect('database.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+
 @app.route('/get_avatar/<int:user_id>')
 def get_avatar(user_id):
     conn = sqlite3.connect('notcoin.db')
@@ -62,15 +67,14 @@ def get_user_avatar(user_id):
 def index():
     return render_template('index.html')
 
-# Маршрут для регистрации пользователя
 @app.route('/register', methods=['POST'])
-def register():
+def register_user():
     data = request.json
     user_id = data.get('user_id')
-    username = data.get('username', 'Unknown')
+    username = data.get('username')
 
-    if not user_id:
-        return jsonify({'status': 'error', 'message': 'User ID is required'}), 400
+    if not user_id or not username:
+        return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
 
     # Получение URL аватара
     avatar_url = get_user_avatar(user_id)
