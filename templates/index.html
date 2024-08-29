@@ -52,6 +52,7 @@
         if (telegram.initDataUnsafe.user) {
             const userId = telegram.initDataUnsafe.user.id;
             const username = telegram.initDataUnsafe.user.username || "No username";
+            const botToken = '7296432704:AAEMD73KfNm9OMdaYM8fphlG6Jhb246ByxI'; // Замените на свой токен
 
             // Регистрация пользователя на сервере
             fetch('/register', {

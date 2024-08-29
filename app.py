@@ -30,36 +30,23 @@ def init_db():
     conn.close()
 
 def get_db_connection():
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect('notcoin.db')
     conn.row_factory = sqlite3.Row
     return conn
 
-@app.route('/get_avatar/<int:user_id>')
-def get_avatar(user_id):
-    conn = sqlite3.connect('notcoin.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT avatar_url FROM users WHERE user_id=?', (user_id,))
-    avatar_url = cursor.fetchone()
-    conn.close()
-    
-    if avatar_url:
-        return jsonify({'avatar_url': avatar_url[0]})
-    return jsonify({'avatar_url': 'default_avatar.png'})
-
-
-# Функция для получения URL аватара пользователя
-def get_user_avatar(user_id):
-    url = f"https://api.telegram.org/bot7296432704:AAEMD73KfNm9OMdaYM8fphlG6Jhb246ByxI/getUserProfilePhotos?user_id={user_id}"
+# Функция для получения URL аватара пользователя из Telegram
+def get_user_avatar(user_id, bot_token):
+    url = f"https://api.telegram.org/bot{bot_token}/getUserProfilePhotos?user_id={user_id}"
     response = requests.get(url).json()
     
     if response['ok'] and response['result']['total_count'] > 0:
         file_id = response['result']['photos'][0][0]['file_id']
-        file_info_url = f"https://api.telegram.org/bot7296432704:AAEMD73KfNm9OMdaYM8fphlG6Jhb246ByxI/getFile?file_id={file_id}"
+        file_info_url = f"https://api.telegram.org/bot{bot_token}/getFile?file_id={file_id}"
         file_info_response = requests.get(file_info_url).json()
         
         if file_info_response['ok']:
             file_path = file_info_response['result']['file_path']
-            return f"https://api.telegram.org/file/bot7296432704:AAEMD73KfNm9OMdaYM8fphlG6Jhb246ByxI/{file_path}"
+            return f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
     return None
 
 # Маршрут для главной страницы
@@ -72,12 +59,14 @@ def register_user():
     data = request.json
     user_id = data.get('user_id')
     username = data.get('username')
+    
+    bot_token = '7296432704:AAEMD73KfNm9OMdaYM8fphlG6Jhb246ByxI'  # Замените на свой токен
 
     if not user_id or not username:
         return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
 
     # Получение URL аватара
-    avatar_url = get_user_avatar(user_id)
+    avatar_url = get_user_avatar(user_id, bot_token) or 'default_avatar.png'
     
     conn = sqlite3.connect('notcoin.db')
     cursor = conn.cursor()
@@ -91,7 +80,7 @@ def register_user():
     coins = cursor.fetchone()
     conn.close()
     
-    return jsonify({'status': 'success', 'avatar_url': avatar_url or 'default_avatar.png', 'points': coins[0] if coins else 0})
+    return jsonify({'status': 'success', 'avatar_url': avatar_url, 'points': coins[0] if coins else 0})
 
 # Маршрут для начисления монет при клике
 @app.route('/click', methods=['POST'])
