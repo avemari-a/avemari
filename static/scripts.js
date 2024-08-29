@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function changeBackground(area) {
         const backgroundContainer = document.getElementById('background-container');
         const earnAreas = document.querySelectorAll('.earn-area');
-        
+
         switch (area) {
             case 'earn':
                 backgroundContainer.style.backgroundImage = "url('/static/earn.jpg')";
