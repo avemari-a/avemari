@@ -1,7 +1,14 @@
 from flask import Flask, request, jsonify, render_template
 import sqlite3
 import requests
+import telebot
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 
+# Конфигурация Telegram Bot
+API_TOKEN = '7296432704:AAEMD73KfNm9OMdaYM8fphlG6Jhb246ByxI'
+bot = telebot.TeleBot(API_TOKEN)
+
+# Конфигурация Flask
 app = Flask(__name__)
 
 # Функция для инициализации базы данных
@@ -61,7 +68,7 @@ def get_user_avatar(user_id, bot_token):
             return f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
     return None
 
-# Маршрут для главной страницы
+# Flask маршруты
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -72,13 +79,11 @@ def register_user():
     user_id = data.get('user_id')
     username = data.get('username')
     
-    bot_token = '7296432704:AAEMD73KfNm9OMdaYM8fphlG6Jhb246ByxI'  # Замените на свой токен
-
     if not user_id or not username:
         return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
 
     # Получение URL аватара
-    avatar_url = get_user_avatar(user_id, bot_token) or '/static/default_avatar.png'
+    avatar_url = get_user_avatar(user_id, API_TOKEN) or '/static/default_avatar.png'
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -94,17 +99,15 @@ def register_user():
     
     return jsonify({'status': 'success', 'avatar_url': avatar_url, 'points': coins[0] if coins else 0})
 
-# Маршрут для отображения профиля пользователя
 @app.route('/profile/<int:user_id>', methods=['GET'])
 def user_profile(user_id):
     avatar_url = get_avatar_from_db(user_id)
     
     if avatar_url is None:
-        avatar_url = '/static/default_avatar.png'  # Использовать аватар по умолчанию, если нет в базе данных
+        avatar_url = '/static/default_avatar.png'
     
     return jsonify({'user_id': user_id, 'avatar_url': avatar_url})
 
-# Маршрут для начисления монет при клике
 @app.route('/click', methods=['POST'])
 def click():
     data = request.json
@@ -112,18 +115,15 @@ def click():
     
     conn = get_db_connection()
     cursor = conn.cursor()
-    # Увеличиваем количество монет на 1
     cursor.execute('UPDATE users SET coins = coins + 1 WHERE user_id=?', (user_id,))
     conn.commit()
     
-    # Получаем обновленное количество монет
     cursor.execute('SELECT coins FROM users WHERE user_id=?', (user_id,))
     coins = cursor.fetchone()[0]
     conn.close()
     
     return jsonify({'status': 'success', 'coins': coins})
 
-# Маршрут для начисления монет в другой ситуации
 @app.route('/earn_coins', methods=['POST'])
 def earn_coins():
     data = request.json
@@ -131,18 +131,15 @@ def earn_coins():
     
     conn = get_db_connection()
     cursor = conn.cursor()
-    # Начисляем монеты
     cursor.execute('UPDATE users SET coins = coins + 1 WHERE user_id=?', (user_id,))
     conn.commit()
     
-    # Получаем количество монет
     cursor.execute('SELECT coins FROM users WHERE user_id=?', (user_id,))
     coins = cursor.fetchone()[0]
     conn.close()
     
     return jsonify({'status': 'success', 'coins': coins})
 
-# Маршрут для приглашения друзей
 @app.route('/invite', methods=['POST'])
 def invite():
     data = request.json
@@ -152,15 +149,12 @@ def invite():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Ищем друга в базе данных по username
     cursor.execute('SELECT user_id FROM users WHERE username=?', (friend_username,))
     friend = cursor.fetchone()
     
     if friend:
         friend_id = friend[0]
-        # Добавляем запись в таблицу рефералов
         cursor.execute('INSERT INTO referrals (user_id, referral_id) VALUES (?, ?)', (user_id, friend_id))
-        # Начисляем монеты за приглашение
         cursor.execute('UPDATE users SET coins = coins + 2500 WHERE user_id=?', (user_id,))
         cursor.execute('UPDATE users SET coins = coins + 2500 WHERE user_id=?', (friend_id,))
         conn.commit()
@@ -169,7 +163,30 @@ def invite():
     
     return jsonify({'status': 'success', 'message': 'Friend invited successfully'})
 
-# Запуск приложения
+# Обработчик команды /start для бота
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    user_id = message.from_user.id
+    username = message.from_user.username or "No username"
+    
+    avatar_url = get_user_avatar(user_id, API_TOKEN) or 'default_avatar.png'
+
+    conn = sqlite3.connect('notcoin.db')
+    cursor = conn.cursor()
+    cursor.execute('INSERT OR IGNORE INTO users (user_id, username, avatar_url) VALUES (?, ?, ?)', 
+                   (user_id, username, avatar_url))
+    conn.commit()
+    conn.close()
+
+    markup = InlineKeyboardMarkup()
+    web_app_info = WebAppInfo(url='https://avemari-avemari-as-projects.vercel.app/')
+    btn = InlineKeyboardButton('Open Mini App', web_app=web_app_info)
+    markup.add(btn)
+    bot.send_message(message.chat.id, "Welcome! Click the button below to open the mini app.", reply_markup=markup)
+
+# Запуск Flask приложения и Telegram бота
 if __name__ == '__main__':
     init_db()  # Инициализируем базу данных при запуске
+    import threading
+    threading.Thread(target=bot.polling).start()
     app.run(debug=True)
