@@ -34,6 +34,18 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+# Функция для получения URL аватара пользователя из базы данных
+def get_avatar_from_db(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT avatar_url FROM users WHERE user_id=?', (user_id,))
+    avatar_url = cursor.fetchone()
+    conn.close()
+    
+    if avatar_url:
+        return avatar_url[0]
+    return 'default_avatar.png'
+
 # Функция для получения URL аватара пользователя из Telegram
 def get_user_avatar(user_id, bot_token):
     url = f"https://api.telegram.org/bot{bot_token}/getUserProfilePhotos?user_id={user_id}"
@@ -81,6 +93,13 @@ def register_user():
     conn.close()
     
     return jsonify({'status': 'success', 'avatar_url': avatar_url, 'points': coins[0] if coins else 0})
+
+# Маршрут для отображения профиля пользователя
+@app.route('/profile/<int:user_id>', methods=['GET'])
+def user_profile(user_id):
+    avatar_url = get_avatar_from_db(user_id)
+    
+    return jsonify({'user_id': user_id, 'avatar_url': avatar_url})
 
 # Маршрут для начисления монет при клике
 @app.route('/click', methods=['POST'])
