@@ -65,11 +65,15 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById("username").textContent = username;
 
         // Получение аватара пользователя из базы данных
-        fetch(`/get_avatar/${user_id}`)
+        fetch(`/profile/${user_id}`)
             .then(response => response.json())
             .then(data => {
                 console.log('Avatar response:', data); // Логируем ответ для отладки
-                document.getElementById("avatar").src = data.avatar_url || '/static/default-avatar.png';
+                if (data.avatar_url) {
+                    document.getElementById("avatar").src = data.avatar_url;
+                } else {
+                    document.getElementById("avatar").src = ''; // Или какой-то плейсхолдер, если нужно
+                }
             })
             .catch(error => console.error('Error fetching avatar:', error)); // Логирование ошибок
     })

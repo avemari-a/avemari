@@ -44,7 +44,7 @@ def get_avatar_from_db(user_id):
     
     if avatar_url:
         return avatar_url[0]
-    return 'default_avatar.png'
+    return None
 
 # Функция для получения URL аватара пользователя из Telegram
 def get_user_avatar(user_id, bot_token):
@@ -78,9 +78,9 @@ def register_user():
         return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
 
     # Получение URL аватара
-    avatar_url = get_user_avatar(user_id, bot_token) or 'default_avatar.png'
+    avatar_url = get_user_avatar(user_id, bot_token) or '/static/default_avatar.png'
     
-    conn = sqlite3.connect('notcoin.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
     # Вставляем пользователя, если его нет в базе
     cursor.execute('INSERT OR IGNORE INTO users (user_id, username, avatar_url) VALUES (?, ?, ?)', 
@@ -99,6 +99,9 @@ def register_user():
 def user_profile(user_id):
     avatar_url = get_avatar_from_db(user_id)
     
+    if avatar_url is None:
+        avatar_url = '/static/default_avatar.png'  # Использовать аватар по умолчанию, если нет в базе данных
+    
     return jsonify({'user_id': user_id, 'avatar_url': avatar_url})
 
 # Маршрут для начисления монет при клике
@@ -107,7 +110,7 @@ def click():
     data = request.json
     user_id = data['user_id']
     
-    conn = sqlite3.connect('notcoin.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
     # Увеличиваем количество монет на 1
     cursor.execute('UPDATE users SET coins = coins + 1 WHERE user_id=?', (user_id,))
@@ -126,7 +129,7 @@ def earn_coins():
     data = request.json
     user_id = data['user_id']
     
-    conn = sqlite3.connect('notcoin.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
     # Начисляем монеты
     cursor.execute('UPDATE users SET coins = coins + 1 WHERE user_id=?', (user_id,))
@@ -146,7 +149,7 @@ def invite():
     user_id = data['user_id']
     friend_username = data['friend_username']
     
-    conn = sqlite3.connect('notcoin.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # Ищем друга в базе данных по username
