@@ -42,58 +42,55 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Инициализация Telegram Web Apps SDK
-    if (window.Telegram && window.Telegram.WebApp) {
-        const tg = window.Telegram.WebApp;
-        const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
-        
-        if (user) {
-            const user_id = user.id;
-            const username = user.username || 'Unknown';
+    const tg = window.Telegram.WebApp;
 
-            console.log('User ID:', user_id); // Логируем ID пользователя
-            console.log('Username:', username); // Логируем имя пользователя
+    // Проверка на наличие данных
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        const user = tg.initDataUnsafe.user;
+        const user_id = user.id;
+        const username = user.username || 'Unknown';
 
-            // Отправляем данные для регистрации на сервер
-            fetch('/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    user_id: user_id,
-                    username: username
-                })
+        console.log('User ID:', user_id); // Логируем ID пользователя
+        console.log('Username:', username); // Логируем имя пользователя
+
+        // Отправляем данные для регистрации на сервер
+        fetch('/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                user_id: user_id,
+                username: username
             })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Register response:', data); // Логируем ответ для отладки
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Register response:', data); // Логируем ответ для отладки
 
-                document.getElementById("username").textContent = username;
+            document.getElementById("username").textContent = username;
 
-                // Получение аватара пользователя из базы данных
-                return fetch(`/profile/${user_id}`);
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Avatar response:', data); // Логируем ответ для отладки
-                const avatarElement = document.getElementById("avatar");
-                if (avatarElement) {
-                    if (data.avatar_url) {
-                        console.log('Avatar URL:', data.avatar_url); // Логируем URL аватара
-                        avatarElement.src = data.avatar_url;
-                    } else {
-                        console.log('Avatar URL is missing, using default'); // Логируем использование аватара по умолчанию
-                        avatarElement.src = '/static/default_avatar.png'; // Путь к аватару по умолчанию
-                    }
+            // Получение аватара пользователя из базы данных
+            return fetch(`/profile/${user_id}`);
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Avatar response:', data); // Логируем ответ для отладки
+            const avatarElement = document.getElementById("avatar");
+            if (avatarElement) {
+                if (data.avatar_url) {
+                    console.log('Avatar URL:', data.avatar_url); // Логируем URL аватара
+                    avatarElement.src = data.avatar_url;
                 } else {
-                    console.error('Avatar element not found');
+                    console.log('Avatar URL is missing, using default'); // Логируем использование аватара по умолчанию
+                    avatarElement.src = '/static/default_avatar.png'; // Путь к аватару по умолчанию
                 }
-            })
-            .catch(error => console.error('Error:', error)); // Логирование ошибок
-        } else {
-            console.error('Telegram WebApp user data is not available');
-        }
+            } else {
+                console.error('Avatar element not found');
+            }
+        })
+        .catch(error => console.error('Error:', error)); // Логирование ошибок
     } else {
-        console.error('Telegram WebApp SDK is not loaded');
+        console.error('Telegram WebApp user data is not available');
     }
 });
