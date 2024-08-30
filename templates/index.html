@@ -43,9 +43,12 @@
     <!-- Скрипт для работы с Telegram Web App -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const tg = window.Telegram.WebApp;
+            const tg = window.Telegram && window.Telegram.WebApp;
 
-            if (tg) {
+            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                const userId = tg.initDataUnsafe.user.id;
+                const username = tg.initDataUnsafe.user.username || "No username";
+
                 // Функция для обновления профиля пользователя
                 function updateUserProfile(avatarUrl, username, points) {
                     document.getElementById('avatar').src = avatarUrl;
@@ -53,28 +56,23 @@
                     document.getElementById('points').textContent = `Points: ${points}`;
                 }
 
-                if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                    const userId = tg.initDataUnsafe.user.id;
-                    const username = tg.initDataUnsafe.user.username || "No username";
-
-                    // Регистрация пользователя на сервере
-                    fetch('/register', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ user_id: userId, username: username })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'success') {
-                            const avatarUrl = data.avatar_url || '/static/default_avatar.png'; // Путь к аватару
-                            const points = data.points || 0;
-                            updateUserProfile(avatarUrl, username, points);
-                        }
-                    })
-                    .catch(error => console.error('Error:', error));
-                }
+                // Регистрация пользователя на сервере
+                fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, username: username })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const avatarUrl = data.avatar_url || '/static/default_avatar.png'; // Путь к аватару
+                        const points = data.points || 0;
+                        updateUserProfile(avatarUrl, username, points);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
             } else {
-                console.error('Telegram WebApp is not available');
+                console.error('Telegram WebApp or user data is not available');
             }
         });
     </script>
