@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Telegram Mini App</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- Подключение Telegram Web Apps SDK -->
+    <script async src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
 
@@ -46,12 +48,16 @@
             document.getElementById('points').textContent = `Points: ${points}`;
         }
 
-        // Получение данных пользователя из Telegram Web App
-        const telegram = window.Telegram.WebApp;
+        // Инициализация Telegram Web Apps SDK и получение данных пользователя
+        document.addEventListener('DOMContentLoaded', function() {
+            const tg = window.Telegram.WebApp;
+            if (!tg) {
+                console.error('Telegram Web App SDK is not loaded.');
+                return;
+            }
 
-        if (telegram.initDataUnsafe.user) {
-            const userId = telegram.initDataUnsafe.user.id;
-            const username = telegram.initDataUnsafe.user.username || "No username";
+            const userId = tg.initDataUnsafe.user.id;
+            const username = tg.initDataUnsafe.user.username || "No username";
 
             // Регистрация пользователя на сервере
             fetch('/register', {
@@ -68,12 +74,8 @@
                 }
             })
             .catch(error => console.error('Error:', error));
-        }
-    </script>
 
-    <!-- Скрипт для работы с кликабельными зонами -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
+            // Работа с кликабельными зонами
             function changeBackground(area) {
                 const backgroundContainer = document.getElementById('background-container');
                 if (area === 'earn') {
@@ -115,44 +117,6 @@
                     }
                 });
             });
-
-            // Инициализация Telegram Web Apps SDK
-            const tg = window.Telegram.WebApp;
-            const user = tg.initDataUnsafe.user;
-            const user_id = user.id;
-            const username = user.username || 'Unknown';
-
-            // Отправляем данные для регистрации на сервер
-            fetch('/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    user_id: user_id,
-                    username: username
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Register response:', data); // Логируем ответ для отладки
-
-                document.getElementById("username").textContent = username;
-
-                // Получение аватара пользователя из базы данных
-                fetch(`/profile/${user_id}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Avatar response:', data); // Логируем ответ для отладки
-                        if (data.avatar_url) {
-                            document.getElementById("avatar").src = data.avatar_url;
-                        } else {
-                            document.getElementById("avatar").src = ''; // Или какой-то плейсхолдер, если нужно
-                        }
-                    })
-                    .catch(error => console.error('Error fetching avatar:', error)); // Логирование ошибок
-            })
-            .catch(error => console.error('Error registering user:', error)); // Логирование ошибок
         });
     </script>
 
