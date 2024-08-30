@@ -58,12 +58,12 @@ def get_user_avatar(user_id, bot_token):
     url = f"https://api.telegram.org/bot{bot_token}/getUserProfilePhotos?user_id={user_id}"
     response = requests.get(url).json()
     
-    if response['ok'] and response['result']['total_count'] > 0:
+    if response.get('ok') and response.get('result', {}).get('total_count', 0) > 0:
         file_id = response['result']['photos'][0][0]['file_id']
         file_info_url = f"https://api.telegram.org/bot{bot_token}/getFile?file_id={file_id}"
         file_info_response = requests.get(file_info_url).json()
         
-        if file_info_response['ok']:
+        if file_info_response.get('ok'):
             file_path = file_info_response['result']['file_path']
             return f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
     return None
@@ -111,7 +111,10 @@ def user_profile(user_id):
 @app.route('/click', methods=['POST'])
 def click():
     data = request.json
-    user_id = data['user_id']
+    user_id = data.get('user_id')
+    
+    if not user_id:
+        return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -127,7 +130,10 @@ def click():
 @app.route('/earn_coins', methods=['POST'])
 def earn_coins():
     data = request.json
-    user_id = data['user_id']
+    user_id = data.get('user_id')
+    
+    if not user_id:
+        return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -143,8 +149,11 @@ def earn_coins():
 @app.route('/invite', methods=['POST'])
 def invite():
     data = request.json
-    user_id = data['user_id']
-    friend_username = data['friend_username']
+    user_id = data.get('user_id')
+    friend_username = data.get('friend_username')
+    
+    if not user_id or not friend_username:
+        return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -179,7 +188,7 @@ def send_welcome(message):
     conn.close()
 
     markup = InlineKeyboardMarkup()
-    web_app_info = WebAppInfo(url='https://avemari-avemari-as-projects.vercel.app/')
+    web_app_info = WebAppInfo(url='https://avemari.vercel.app/')
     btn = InlineKeyboardButton('Open Mini App', web_app=web_app_info)
     markup.add(btn)
     bot.send_message(message.chat.id, "Welcome! Click the button below to open the mini app.", reply_markup=markup)
