@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify, render_template
 import sqlite3
-import requests
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 
@@ -20,7 +19,6 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY, 
             username TEXT,
-            avatar_url TEXT,
             coins INTEGER DEFAULT 0
         )
     ''')
@@ -41,33 +39,6 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# Функция для получения URL аватара пользователя из базы данных
-def get_avatar_from_db(user_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('SELECT avatar_url FROM users WHERE user_id=?', (user_id,))
-    avatar_url = cursor.fetchone()
-    conn.close()
-    
-    if avatar_url:
-        return avatar_url[0]
-    return None
-
-# Функция для получения URL аватара пользователя из Telegram
-def get_user_avatar(user_id, bot_token):
-    url = f"https://api.telegram.org/bot{bot_token}/getUserProfilePhotos?user_id={user_id}"
-    response = requests.get(url).json()
-    
-    if response.get('ok') and response.get('result', {}).get('total_count', 0) > 0:
-        file_id = response['result']['photos'][0][0]['file_id']
-        file_info_url = f"https://api.telegram.org/bot{bot_token}/getFile?file_id={file_id}"
-        file_info_response = requests.get(file_info_url).json()
-        
-        if file_info_response.get('ok'):
-            file_path = file_info_response['result']['file_path']
-            return f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
-    return None
-
 # Flask маршруты
 @app.route('/')
 def index():
@@ -81,15 +52,12 @@ def register_user():
     
     if not user_id or not username:
         return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
-
-    # Получение URL аватара
-    avatar_url = get_user_avatar(user_id, API_TOKEN) or '/static/default_avatar.png'
     
     conn = get_db_connection()
     cursor = conn.cursor()
     # Вставляем пользователя, если его нет в базе
-    cursor.execute('INSERT OR IGNORE INTO users (user_id, username, avatar_url) VALUES (?, ?, ?)', 
-                   (user_id, username, avatar_url))
+    cursor.execute('INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)', 
+                   (user_id, username))
     conn.commit()
     
     # Получение текущего количества монет
@@ -97,16 +65,7 @@ def register_user():
     coins = cursor.fetchone()
     conn.close()
     
-    return jsonify({'status': 'success', 'avatar_url': avatar_url, 'points': coins[0] if coins else 0})
-
-@app.route('/profile/<int:user_id>', methods=['GET'])
-def user_profile(user_id):
-    avatar_url = get_avatar_from_db(user_id)
-    
-    if avatar_url is None:
-        avatar_url = '/static/default_avatar.png'
-    
-    return jsonify({'user_id': user_id, 'avatar_url': avatar_url})
+    return jsonify({'status': 'success', 'points': coins[0] if coins else 0})
 
 @app.route('/click', methods=['POST'])
 def click():
@@ -177,13 +136,11 @@ def invite():
 def send_welcome(message):
     user_id = message.from_user.id
     username = message.from_user.username or "No username"
-    
-    avatar_url = get_user_avatar(user_id, API_TOKEN) or 'default_avatar.png'
 
     conn = sqlite3.connect('notcoin.db')
     cursor = conn.cursor()
-    cursor.execute('INSERT OR IGNORE INTO users (user_id, username, avatar_url) VALUES (?, ?, ?)', 
-                   (user_id, username, avatar_url))
+    cursor.execute('INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)', 
+                   (user_id, username))
     conn.commit()
     conn.close()
 

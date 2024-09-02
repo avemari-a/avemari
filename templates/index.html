@@ -10,7 +10,6 @@
 
     <!-- Профиль пользователя -->
     <div class="profile">
-        <img id="avatar" class="avatar" src="" alt="Avatar">
         <p id="username">User name</p>
         <p id="points">Points: 0</p>
     </div>
@@ -52,13 +51,6 @@
                     const userId = user.id;
                     const username = user.username || "No username";
 
-                    // Функция для обновления профиля пользователя
-                    function updateUserProfile(avatarUrl, username, points) {
-                        document.getElementById('avatar').src = avatarUrl;
-                        document.getElementById('username').textContent = username;
-                        document.getElementById('points').textContent = `Points: ${points}`;
-                    }
-
                     // Регистрация пользователя на сервере
                     fetch('/register', {
                         method: 'POST',
@@ -68,9 +60,9 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.status === 'success') {
-                            const avatarUrl = data.avatar_url || '/static/default_avatar.png'; // Путь к аватару
                             const points = data.points || 0;
-                            updateUserProfile(avatarUrl, username, points);
+                            document.getElementById('username').textContent = username;
+                            document.getElementById('points').textContent = `Points: ${points}`;
                         }
                     })
                     .catch(error => console.error('Error:', error));

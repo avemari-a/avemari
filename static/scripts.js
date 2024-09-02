@@ -69,25 +69,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Register response:', data); // Логируем ответ для отладки
 
             document.getElementById("username").textContent = username;
-
-            // Получение аватара пользователя из базы данных
-            return fetch(`/profile/${user_id}`);
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Avatar response:', data); // Логируем ответ для отладки
-            const avatarElement = document.getElementById("avatar");
-            if (avatarElement) {
-                if (data.avatar_url) {
-                    console.log('Avatar URL:', data.avatar_url); // Логируем URL аватара
-                    avatarElement.src = data.avatar_url;
-                } else {
-                    console.log('Avatar URL is missing, using default'); // Логируем использование аватара по умолчанию
-                    avatarElement.src = '/static/default_avatar.png'; // Путь к аватару по умолчанию
-                }
-            } else {
-                console.error('Avatar element not found');
-            }
         })
         .catch(error => console.error('Error:', error)); // Логирование ошибок
     } else {
