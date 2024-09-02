@@ -163,6 +163,19 @@ body {
     padding: 0;
 }
 
+
+.avatar-container {
+    width: 100px;
+    height: 100px;
+    border: 2px solid #000; /* Чёрный контур вокруг аватара */
+    border-radius: 50%; /* Круглая форма */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* Чтобы картинка не выходила за границы */
+    margin-bottom: 10px; /* Отступ снизу */
+}
+
 .avatar {
     width: 10%;
     height: 100%;
