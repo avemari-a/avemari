@@ -15,43 +15,10 @@ app = Flask(__name__)
 # Логирование
 logging.basicConfig(level=logging.INFO)
 
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    user_id = message.from_user.id
-    username = message.from_user.username or "No username"
-
-    conn = sqlite3.connect('notcoin.db')
-    cursor = conn.cursor()
-    cursor.execute('INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)', 
-                   (user_id, username))
-    conn.commit()
-    conn.close()
-
-    # Запрашиваем аватар пользователя
-    avatar_url = get_user_avatar(user_id)
-    
-    # Подготавливаем данные для mini-app
-    user_data = {
-        "user_id": user_id,
-        "username": username,
-        "avatar_url": avatar_url or '/static/default_avatar.png'
-    }
-
-    # Передаем данные mini-app через WebAppInfo
-    markup = InlineKeyboardMarkup()
-    web_app_info = WebAppInfo(url='https://avemari.vercel.app/')
-    btn = InlineKeyboardButton('Open Mini App', web_app=web_app_info)
-    markup.add(btn)
-    bot.send_message(message.chat.id, "Welcome! Your data is ready.", reply_markup=markup)
-
-
+# Функция для получения аватара пользователя
 def get_user_avatar(user_id):
     url = f"https://api.telegram.org/bot{API_TOKEN}/getUserProfilePhotos"
-    params = {
-        'user_id': user_id,
-        'limit': 1
-    }
-
+    params = {'user_id': user_id, 'limit': 1}
     try:
         response = requests.get(url, params=params)
         response.raise_for_status()  # Проверка на наличие HTTP ошибок
@@ -61,50 +28,80 @@ def get_user_avatar(user_id):
             file_response = requests.get(f"https://api.telegram.org/bot{API_TOKEN}/getFile?file_id={file_id}")
             file_response.raise_for_status()
             file_data = file_response.json()
-
             if file_data['ok']:
                 file_path = file_data['result']['file_path']
                 avatar_url = f"https://api.telegram.org/file/bot{API_TOKEN}/{file_path}"
                 return avatar_url
-
     except requests.RequestException as e:
         logging.error(f"Error fetching avatar: {e}")
-    
     return None
 
+# Обработчик команды /start для бота
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    user_id = message.from_user.id
+    username = message.from_user.username or "No username"
+
+    # Сохраняем пользователя в базу данных, если его там нет
+    conn = sqlite3.connect('notcoin.db')
+    cursor = conn.cursor()
+    cursor.execute('INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)', 
+                   (user_id, username))
+    conn.commit()
+
+    # Получаем аватар пользователя
+    avatar_url = get_user_avatar(user_id)
+
+    # Обновляем аватар пользователя в базе данных
+    if avatar_url:
+        cursor.execute('UPDATE users SET avatar_url=? WHERE user_id=?', (avatar_url, user_id))
+        conn.commit()
+
+    conn.close()
+
+    # Подготавливаем данные для mini-app
+    user_data = {
+        "user_id": user_id,
+        "username": username,
+        "avatar_url": avatar_url or '/static/default_avatar.png'
+    }
+
+    # Передаем данные mini-app через WebAppInfo
+    markup = InlineKeyboardMarkup()
+    web_app_info = WebAppInfo(url='https://avemari.vercel.app/')  # Замените на ваш URL
+    btn = InlineKeyboardButton('Open Mini App', web_app=web_app_info)
+    markup.add(btn)
+    bot.send_message(message.chat.id, "Welcome! Your data is ready.", reply_markup=markup)
+
+# Маршрут для получения аватара пользователя
 @app.route('/get_avatar', methods=['POST'])
 def get_avatar():
     user_id = request.json.get('user_id')
     if not user_id:
         return jsonify({"status": "error", "message": "User ID is missing"}), 400
 
-    avatar_url = get_user_avatar(user_id)
-    if avatar_url:
-        return jsonify({"status": "success", "avatar_url": avatar_url})
+    conn = sqlite3.connect('notcoin.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT avatar_url FROM users WHERE user_id=?', (user_id,))
+    user = cursor.fetchone()
+    conn.close()
+
+    if user and user[0]:
+        return jsonify({"status": "success", "avatar_url": user[0]})
     else:
         return jsonify({"status": "error", "message": "Avatar not found"}), 404
 
-# Оставшиеся маршруты и логика остаются неизменными
-
-# Функция для инициализации базы данных
+# Инициализация базы данных
 def init_db():
     conn = sqlite3.connect('notcoin.db')
     cursor = conn.cursor()
-    # Создание таблицы пользователей
+    # Создание таблицы пользователей с полем для аватара
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY, 
             username TEXT,
+            avatar_url TEXT,
             coins INTEGER DEFAULT 0
-        )
-    ''')
-    # Создание таблицы для рефералов
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS referrals (
-            user_id INTEGER,
-            referral_id INTEGER,
-            FOREIGN KEY (user_id) REFERENCES users(user_id),
-            FOREIGN KEY (referral_id) REFERENCES users(user_id)
         )
     ''')
     conn.commit()
@@ -115,11 +112,12 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# Flask маршруты
+# Основной маршрут
 @app.route('/')
 def index():
     return render_template('index.html')
 
+# Маршрут для регистрации пользователя
 @app.route('/register', methods=['POST'])
 def register_user():
     data = request.json
@@ -135,96 +133,13 @@ def register_user():
     cursor.execute('INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)', 
                    (user_id, username))
     conn.commit()
-    
+
     # Получение текущего количества монет
     cursor.execute('SELECT coins FROM users WHERE user_id=?', (user_id,))
     coins = cursor.fetchone()
     conn.close()
     
     return jsonify({'status': 'success', 'points': coins[0] if coins else 0})
-
-@app.route('/click', methods=['POST'])
-def click():
-    data = request.json
-    user_id = data.get('user_id')
-    
-    if not user_id:
-        return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('UPDATE users SET coins = coins + 1 WHERE user_id=?', (user_id,))
-    conn.commit()
-    
-    cursor.execute('SELECT coins FROM users WHERE user_id=?', (user_id,))
-    coins = cursor.fetchone()[0]
-    conn.close()
-    
-    return jsonify({'status': 'success', 'coins': coins})
-
-@app.route('/earn_coins', methods=['POST'])
-def earn_coins():
-    data = request.json
-    user_id = data.get('user_id')
-    
-    if not user_id:
-        return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('UPDATE users SET coins = coins + 1 WHERE user_id=?', (user_id,))
-    conn.commit()
-    
-    cursor.execute('SELECT coins FROM users WHERE user_id=?', (user_id,))
-    coins = cursor.fetchone()[0]
-    conn.close()
-    
-    return jsonify({'status': 'success', 'coins': coins})
-
-@app.route('/invite', methods=['POST'])
-def invite():
-    data = request.json
-    user_id = data.get('user_id')
-    friend_username = data.get('friend_username')
-    
-    if not user_id or not friend_username:
-        return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('SELECT user_id FROM users WHERE username=?', (friend_username,))
-    friend = cursor.fetchone()
-    
-    if friend:
-        friend_id = friend[0]
-        cursor.execute('INSERT INTO referrals (user_id, referral_id) VALUES (?, ?)', (user_id, friend_id))
-        cursor.execute('UPDATE users SET coins = coins + 2500 WHERE user_id=?', (user_id,))
-        cursor.execute('UPDATE users SET coins = coins + 2500 WHERE user_id=?', (friend_id,))
-        conn.commit()
-        
-    conn.close()
-    
-    return jsonify({'status': 'success', 'message': 'Friend invited successfully'})
-
-# Обработчик команды /start для бота
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    user_id = message.from_user.id
-    username = message.from_user.username or "No username"
-
-    conn = sqlite3.connect('notcoin.db')
-    cursor = conn.cursor()
-    cursor.execute('INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)', 
-                   (user_id, username))
-    conn.commit()
-    conn.close()
-
-    markup = InlineKeyboardMarkup()
-    web_app_info = WebAppInfo(url='https://avemari.vercel.app/')
-    btn = InlineKeyboardButton('Open Mini App', web_app=web_app_info)
-    markup.add(btn)
-    bot.send_message(message.chat.id, "Welcome! Click the button below to open the mini app.", reply_markup=markup)
 
 # Запуск Flask приложения и Telegram бота
 if __name__ == '__main__':
