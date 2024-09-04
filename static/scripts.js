@@ -44,14 +44,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Инициализация Telegram Web Apps SDK
     const tg = window.Telegram.WebApp;
 
-    // Проверка на наличие данных
+    // Проверка на наличие данных пользователя Telegram
     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
         const user = tg.initDataUnsafe.user;
         const user_id = user.id;
         const username = user.username || 'Unknown';
+        const photo_url = user.photo_url || '/static/default_avatar.png'; // Используем аватар из Telegram или аватар по умолчанию
 
         console.log('User ID:', user_id); // Логируем ID пользователя
         console.log('Username:', username); // Логируем имя пользователя
+        console.log('Photo URL:', photo_url); // Логируем URL аватара
 
         // Отправляем данные для регистрации на сервер
         fetch('/register', {
@@ -68,7 +70,12 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             console.log('Register response:', data); // Логируем ответ для отладки
 
+            // Обновляем имя пользователя и аватар на фронтенде
             document.getElementById("username").textContent = username;
+            const avatarElement = document.getElementById("avatar");
+            if (avatarElement) {
+                avatarElement.src = photo_url; // Подставляем аватар пользователя из Telegram
+            }
         })
         .catch(error => console.error('Error:', error)); // Логирование ошибок
     } else {
