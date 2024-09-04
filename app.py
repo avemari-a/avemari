@@ -15,6 +15,36 @@ app = Flask(__name__)
 # Логирование
 logging.basicConfig(level=logging.INFO)
 
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    user_id = message.from_user.id
+    username = message.from_user.username or "No username"
+
+    conn = sqlite3.connect('notcoin.db')
+    cursor = conn.cursor()
+    cursor.execute('INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)', 
+                   (user_id, username))
+    conn.commit()
+    conn.close()
+
+    # Запрашиваем аватар пользователя
+    avatar_url = get_user_avatar(user_id)
+    
+    # Подготавливаем данные для mini-app
+    user_data = {
+        "user_id": user_id,
+        "username": username,
+        "avatar_url": avatar_url or '/static/default_avatar.png'
+    }
+
+    # Передаем данные mini-app через WebAppInfo
+    markup = InlineKeyboardMarkup()
+    web_app_info = WebAppInfo(url='https://avemari.vercel.app/')
+    btn = InlineKeyboardButton('Open Mini App', web_app=web_app_info)
+    markup.add(btn)
+    bot.send_message(message.chat.id, "Welcome! Your data is ready.", reply_markup=markup)
+
+
 def get_user_avatar(user_id):
     url = f"https://api.telegram.org/bot{API_TOKEN}/getUserProfilePhotos"
     params = {
