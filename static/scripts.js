@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Обновляем имя пользователя и аватар на фронтенде
             document.getElementById("username").textContent = username;
             const avatarElement = document.getElementById("avatar");
-            if (avatarElement) {
+            if (avatarElement && photo_url) {
                 avatarElement.src = photo_url; // Подставляем аватар пользователя из Telegram
             }
         })
