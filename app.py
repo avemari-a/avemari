@@ -1,5 +1,6 @@
-from flask import Flask, request, jsonify, render_template
+import logging
 import sqlite3
+from flask import Flask, request, jsonify, render_template
 import telebot
 import requests
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
@@ -7,47 +8,53 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 # Конфигурация Telegram Bot
 API_TOKEN = '7296432704:AAEMD73KfNm9OMdaYM8fphlG6Jhb246ByxI'
 bot = telebot.TeleBot(API_TOKEN)
-TELEGRAM_BOT_TOKEN = '7296432704:AAEMD73KfNm9OMdaYM8fphlG6Jhb246ByxI'
-
-
 
 # Конфигурация Flask
 app = Flask(__name__)
 
+# Логирование
+logging.basicConfig(level=logging.INFO)
+
 def get_user_avatar(user_id):
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUserProfilePhotos"
+    url = f"https://api.telegram.org/bot{API_TOKEN}/getUserProfilePhotos"
     params = {
         'user_id': user_id,
-        'limit': 1  # Ограничиваем количество фото, чтобы получить только последнее
+        'limit': 1
     }
+
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()  # Проверка на наличие HTTP ошибок
+        data = response.json()
+        if data['ok'] and data['result']['total_count'] > 0:
+            file_id = data['result']['photos'][0][0]['file_id']
+            file_response = requests.get(f"https://api.telegram.org/bot{API_TOKEN}/getFile?file_id={file_id}")
+            file_response.raise_for_status()
+            file_data = file_response.json()
+
+            if file_data['ok']:
+                file_path = file_data['result']['file_path']
+                avatar_url = f"https://api.telegram.org/file/bot{API_TOKEN}/{file_path}"
+                return avatar_url
+
+    except requests.RequestException as e:
+        logging.error(f"Error fetching avatar: {e}")
     
-    response = requests.get(url, params=params)
-    data = response.json()
-    
-    if data['ok'] and data['result']['total_count'] > 0:
-        # Берем первое фото из списка
-        file_id = data['result']['photos'][0][0]['file_id']
-        
-        # Получаем URL файла с помощью getFile
-        file_response = requests.get(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getFile?file_id={file_id}")
-        file_data = file_response.json()
-        
-        if file_data['ok']:
-            file_path = file_data['result']['file_path']
-            avatar_url = f"https://api.telegram.org/file/bot{TELEGRAM_BOT_TOKEN}/{file_path}"
-            return avatar_url
-    
-    return None  # Если аватар не найден
+    return None
 
 @app.route('/get_avatar', methods=['POST'])
 def get_avatar():
     user_id = request.json.get('user_id')
+    if not user_id:
+        return jsonify({"status": "error", "message": "User ID is missing"}), 400
+
     avatar_url = get_user_avatar(user_id)
-    
     if avatar_url:
         return jsonify({"status": "success", "avatar_url": avatar_url})
     else:
         return jsonify({"status": "error", "message": "Avatar not found"}), 404
+
+# Оставшиеся маршруты и логика остаются неизменными
 
 # Функция для инициализации базы данных
 def init_db():
